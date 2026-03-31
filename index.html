@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo cáo Chấm công & Viếng thăm - Mobiwork</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 BÁO CÁO CHẤM CÔNG & VIẾNG THĂM KHÁCH HÀNG</h1>
+            <div class="date">Hệ thống Mobiwork | Cập nhật: <span id="currentDate"></span></div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group">
+                <label>📅 Từ ngày</label>
+                <input type="date" id="fromDate" value="2026-03-01">
+            </div>
+            <div class="filter-group">
+                <label>📅 Đến ngày</label>
+                <input type="date" id="toDate" value="2026-03-02">
+            </div>
+            <div class="filter-group">
+                <label>🏢 Khu vực</label>
+                <select id="areaFilter">
+                    <option value="all">Tất cả</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>👤 Nhân viên</label>
+                <select id="employeeFilter">
+                    <option value="all">Tất cả</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="window.loadData()">🔍 Xem báo cáo</button>
+            <button class="btn btn-secondary" onclick="window.exportExcel()">📥 Xuất Excel</button>
+            <button class="btn btn-success" onclick="window.exportChart()">📊 Xuất biểu đồ (PNG)</button>
+        </div>
+
+        <div class="progress-container" id="progressContainer" style="display: none;">
+            <div class="progress-bar" id="progressBar"></div>
+            <div class="progress-text" id="progressText">Đang tải dữ liệu...</div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="window.switchTab('overview')">📈 Tổng quan (Biểu đồ)</button>
+            <button class="tab-btn" onclick="window.switchTab('detail')">📋 Chi tiết (Bảng dữ liệu)</button>
+        </div>
+
+        <div id="overviewTab" class="tab-content active">
+            <div id="overviewContent">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Vui lòng nhấn "Xem báo cáo" để tải dữ liệu...</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="detailTab" class="tab-content">
+            <div id="detailContent">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Vui lòng nhấn "Xem báo cáo" để tải dữ liệu...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
