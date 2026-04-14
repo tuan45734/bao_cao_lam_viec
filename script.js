@@ -5,7 +5,7 @@ const API_CONFIG = {
     auth: 'Basic NjlhZTZlNmM4YTY0NjVmNDFlNTNhZmI0OjFuYzFnc3J1N2p2Ym10eTdncGV5NWk='
 };
 
-// Khu vực mapping - ĐÃ THÊM MAPPING KV TRỰC TIẾP
+// Khu vực mapping
 const AREA_MAPPING = [
     ['NPP Bảo Lâm', 'KV1'], ['NPP Công Giang', 'KV1'], ['NPP Cường Thịnh', 'KV1'],
     ['NPP Đức Nam Tiến', 'KV1'], ['NPP Dũng Cúc', 'KV1'], ['NPP Lâm Hạ', 'KV1'],
@@ -30,8 +30,6 @@ const AREA_MAPPING = [
     ['NPP Minh Lộc', 'KV6'], ['NPP Nhung Tùng', 'KV6'], ['NPP Phương Hà', 'KV6'],
     ['NPP Tân Bích An', 'KV6'], ['NPP Thanh Bình', 'KV6'], ['NPP Thành Thanh', 'KV6'],
     ['NPP Thông Thơm', 'KV6'], ['NPP Trường Hằng', 'KV6'],
-    
-    // ===== THÊM MAPPING CHO KV TRỰC TIẾP (cho nhân viên mã 2 ký tự) =====
     ['KV1', 'KV1'], ['KV2', 'KV2'], ['KV3', 'KV3'], ['KV4', 'KV4'], ['KV5', 'KV5'], ['KV6', 'KV6']
 ];
 
@@ -60,15 +58,9 @@ function updateProgress(percent, text) {
 }
 
 function getArea(maDonVi) {
-    // Tìm theo tên NPP
     const found = AREA_MAPPING.find(item => item[0] === maDonVi);
     if (found) return found[1];
-    
-    // Nếu maDonVi là KV trực tiếp (VD: KV1, KV2...)
-    if (maDonVi && maDonVi.startsWith('KV')) {
-        return maDonVi;
-    }
-    
+    if (maDonVi && maDonVi.startsWith('KV')) return maDonVi;
     return null;
 }
 
@@ -116,19 +108,15 @@ function hasAnyAttendance(checkin, checkout) {
 }
 
 function getEmployeeType(maNV) {
-    // Mã 2 ký tự (A3, A4, A5...)
     if (maNV && maNV.length === 2 && maNV.startsWith('A')) {
         return { type: '2chars', group: 'normal', priority: 1 };
     }
-    // Mã 4 ký tự (A201, A212...)
     if (maNV && maNV.length === 4 && maNV.startsWith('A')) {
         return { type: '4chars', group: 'normal', priority: 2 };
     }
-    // Mã KEY
     if (maNV && maNV.startsWith('KEY')) {
         return { type: 'KEY', group: 'key', priority: 3 };
     }
-    // Mã 7 ký tự có dấu chấm
     if (maNV && maNV.includes('.') && maNV.length >= 7) {
         return { type: '7chars', group: 'key', priority: 4 };
     }
@@ -164,25 +152,25 @@ function checkAttendanceErrorWithLevel(checkinTime, checkoutTime, errorCount, gr
         if (group === 'key') {
             if (errorCount === 1) {
                 penalty = 0;
-                colorClass = 'warning';      // giữ nguyên
+                colorClass = 'warning';
             } else if (errorCount === 2) {
                 penalty = 0.5;
-                colorClass = 'warning-level2'; // giữ nguyên
+                colorClass = 'warning-level2';
             } else {
                 penalty = 1;
-                colorClass = 'danger';        // giữ nguyên
+                colorClass = 'danger';
             }
         } else {
             if (errorCount === 1) {
                 penalty = 0;
-                colorClass = 'warning';      // giữ nguyên
+                colorClass = 'warning';
             } else {
                 penalty = 1;
-                colorClass = 'danger';        // giữ nguyên
+                colorClass = 'danger';
             }
         }
     } else {
-        colorClass = 'success';               // giữ nguyên
+        colorClass = 'success';
     }
     
     return { hasError, penalty, colorClass, isLate, isEarly };
@@ -618,6 +606,8 @@ function sortEmployeesByPriority(employees) {
     });
 }
 
+// script.js - CHỈ THAY ĐỔI HÀM renderDetail() và giữ nguyên mọi thứ khác
+
 function renderDetail() {
     const filtered = filterData();
     
@@ -641,6 +631,7 @@ function renderDetail() {
                     <th>Họ tên</th>
                     <th>Chi tiết chấm công</th>
                     <th>Chi tiết viếng thăm</th>
+                    <th>Công chi tiết</th>
                     <th>Tổng công</th>
                 </tr>
             </thead>
@@ -650,19 +641,20 @@ function renderDetail() {
     const sortedKV = Object.keys(groupedByKV).sort();
     
     for (const kv of sortedKV) {
-        html += `<tr class="group-row"><td colspan="6"><strong>🏢 KHU VỰC: ${kv}</strong></td></tr>`;
+        html += `<tr class="group-row"><td colspan="7"><strong>🏢 KHU VỰC: ${kv}</strong></td></tr>`;
         
         const npps = groupedByKV[kv];
         const sortedNPP = Object.keys(npps).sort();
         
         for (const npp of sortedNPP) {
-            html += `<tr class="group-row" style="background:#f5f5f5;"><td colspan="6"><strong>📌 ${npp}</strong></td></tr>`;
+            html += `<tr class="group-row" style="background:#f5f5f5;"><td colspan="7"><strong>📌 ${npp}</strong></td></tr>`;
             
             const employees = sortEmployeesByPriority(npps[npp]);
             
             for (const emp of employees) {
                 stt++;
                 
+                // === Chi tiết chấm công - KHÔNG GIỚI HẠN CHIỀU CAO ===
                 let attendanceHtml = '';
                 if (emp.attendanceDetails && emp.attendanceDetails.length > 0) {
                     emp.attendanceDetails.forEach(att => {
@@ -686,6 +678,7 @@ function renderDetail() {
                     attendanceHtml = '<div>Không có dữ liệu</div>';
                 }
                 
+                // === Chi tiết viếng thăm - KHÔNG GIỚI HẠN CHIỀU CAO ===
                 let visitHtml = '';
                 if (emp.visitDetails && emp.visitDetails.length > 0) {
                     emp.visitDetails.forEach(visit => {
@@ -704,39 +697,38 @@ function renderDetail() {
                     visitHtml = '<div>Không có dữ liệu</div>';
                 }
                 
+                // === Công chi tiết - KHÔNG GIỚI HẠN CHIỀU CAO ===
                 let dailyWorkHtml = '';
                 if (emp.dailyWork && emp.dailyWork.length > 0) {
                     emp.dailyWork.forEach(day => {
                         const displayDate = formatDateWithWeekday(day.date);
-                        dailyWorkHtml += `<div class="visit-item" style="font-size:11px; margin:2px 0;">
-                            ${displayDate}: ${day.workValue} công
+                        let workClass = '';
+                        if (day.workValue === 0) workClass = 'no-attendance';
+                        else if (day.workValue < 1) workClass = 'warning';
+                        else workClass = 'success';
+                        dailyWorkHtml += `<div class="attendance-item ${workClass}" style="text-align:center;">
+                            ${displayDate}: <strong>${day.workValue}</strong> công
                         </div>`;
                     });
+                } else {
+                    dailyWorkHtml = '<div>Không có dữ liệu</div>';
                 }
+                
+                // === Tổng công ===
+                const totalHtml = `<div class="total-work-footer" style="text-align:center; background:#e8f5e9; padding:12px; border-radius:8px;">
+                    <strong style="font-size:20px; color:#e67e22;">${emp.totalWork}</strong>
+                    <div style="font-size:11px;">công</div>
+                </div>`;
                 
                 html += `
                     <tr>
-                        <td>${stt}</td>
-                        <td>${emp.maNV}</td>
-                        <td>${emp.tenNV}<br><span class="area-badge">${emp.area}</span></td>
-                        <td style="max-width:250px">
-                            <div style="max-height:200px; overflow-y:auto;">
-                                ${attendanceHtml}
-                            </div>
-                        </td>
-                        <td style="max-width:250px">
-                            <div style="max-height:200px; overflow-y:auto;">
-                                ${visitHtml}
-                            </div>
-                        </td>
-                        <td style="min-width:150px">
-                            <div style="max-height:150px; overflow-y:auto;">
-                                ${dailyWorkHtml}
-                            </div>
-                            <div class="total-work-footer">
-                                <strong> Tổng: ${emp.totalWork} công</strong>
-                            </div>
-                        </td>
+                        <td style="vertical-align:top;">${stt}</td>
+                        <td style="vertical-align:top;">${emp.maNV}</td>
+                        <td style="vertical-align:top;">${emp.tenNV}<br><span class="area-badge">${emp.area}</span></td>
+                        <td style="vertical-align:top;">${attendanceHtml}</td>
+                        <td style="vertical-align:top;">${visitHtml}</td>
+                        <td style="vertical-align:top;">${dailyWorkHtml}</td>
+                        <td style="vertical-align:top; text-align:center;">${totalHtml}</td>
                     </tr>
                 `;
             }
@@ -766,9 +758,7 @@ async function loadData() {
         
         processReport();
         
-        // ===== THÊM DÒNG NÀY ĐỂ GÁN DỮ LIỆU RA GLOBAL =====
         window.reportData = reportData;
-        // ================================================
         
         const areaSelect = document.getElementById('areaFilter');
         const employeeSelect = document.getElementById('employeeFilter');
@@ -794,15 +784,12 @@ async function loadData() {
     }
 }
 
-// Hàm xuất Excel - đã sửa xuống dòng
 window.exportExcelFunction = function() {
     const filtered = filterData();
     
-    // Sử dụng \n để xuống dòng trong Excel (khi mở bằng Excel sẽ tự xuống dòng)
-    let csv = "STT,Mã NV,Họ tên,Khu vực,Đơn vị,Chi tiết chấm công,Chi tiết viếng thăm,Tổng công\n";
+    let csv = "STT,Mã NV,Họ tên,Khu vực,Đơn vị,Chi tiết chấm công,Chi tiết viếng thăm,Công chi tiết (ngày-công),Tổng công\n";
     
     filtered.forEach((emp, idx) => {
-        // Gộp chi tiết chấm công - mỗi ngày xuống dòng
         let attendanceLines = [];
         emp.attendanceDetails.forEach(att => {
             const displayDate = formatDateWithWeekday(att.normalizedDate || att.date);
@@ -814,18 +801,24 @@ window.exportExcelFunction = function() {
                 attendanceLines.push(`${displayDate}: Không chấm công`);
             }
         });
-        let attendanceStr = attendanceLines.join('\n'); // Xuống dòng bằng \n
+        let attendanceStr = attendanceLines.join('\n');
         
-        // Gộp chi tiết viếng thăm - mỗi ngày xuống dòng
         let visitLines = [];
         emp.visitDetails.forEach(visit => {
             const displayDate = formatDateWithWeekday(visit.date);
             visitLines.push(`${displayDate}: ${visit.count} lượt`);
         });
-        let visitStr = visitLines.join('\n'); // Xuống dòng bằng \n
+        let visitStr = visitLines.join('\n');
         
-        // Thêm dấu ngoặc kép để Excel giữ nguyên xuống dòng
-        csv += `"${idx+1}","${emp.maNV}","${emp.tenNV}","${emp.area}","${emp.maDonVi || ''}","${attendanceStr}","${visitStr}",${emp.totalWork}\n`;
+        // Công chi tiết
+        let workDetailLines = [];
+        emp.dailyWork.forEach(day => {
+            const displayDate = formatDateWithWeekday(day.date);
+            workDetailLines.push(`${displayDate}: ${day.workValue} công`);
+        });
+        let workDetailStr = workDetailLines.join('\n');
+        
+        csv += `"${idx+1}","${emp.maNV}","${emp.tenNV}","${emp.area}","${emp.maDonVi || ''}","${attendanceStr}","${visitStr}","${workDetailStr}",${emp.totalWork}\n`;
     });
     
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
