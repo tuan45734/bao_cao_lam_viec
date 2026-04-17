@@ -832,6 +832,656 @@ window.exportExcelFunction = function() {
     URL.revokeObjectURL(url);
 };
 
+// ==================== BIỂU ĐỒ TỔNG QUAN ====================
+
+// Lấy danh sách nhân viên theo loại
+function getEmployeesByType(type) {
+    // type: 'staff' - nhân viên (mã 7 ký tự có dấu chấm hoặc KEY)
+    //        'supervisor' - giám sát (mã 4 ký tự Axxx)
+    return reportData.filter(emp => {
+        const ma = emp.maNV;
+        if (type === 'staff') {
+            return (ma.includes('.') && ma.length >= 7) || ma.startsWith('KEY');
+        } else if (type === 'supervisor') {
+            return ma.length === 4 && ma.startsWith('A') && !ma.includes('.');
+        }
+        return false;
+    });
+}
+
+// Tính số lần vào muộn/về sớm và số người vi phạm
+function calculateLateEarlyStats(employees) {
+    let totalLateEarlyCount = 0; // tổng số lần
+    let peopleWithLateEarly = new Set(); // người có ít nhất 1 lần
+    
+    employees.forEach(emp => {
+        let hasViolation = false;
+        emp.attendanceDetails.forEach(att => {
+            if (att.isLate || att.isEarly) {
+                totalLateEarlyCount++;
+                hasViolation = true;
+            }
+        });
+        if (hasViolation) peopleWithLateEarly.add(emp.maNV);
+    });
+    
+    return {
+        totalLateEarlyCount: totalLateEarlyCount,
+        peopleWithLateEarlyCount: peopleWithLateEarly.size
+    };
+}
+
+// Tính thống kê viếng thăm cho nhân viên (7 ký tự hoặc KEY)
+function calculateVisitStatsForStaff(employees) {
+    let totalNotEnoughVisits = 0; // tổng số lần viếng thăm không đủ
+    let peopleWithNotEnough = new Set(); // người có ít nhất 1 lần không đủ
+    
+    employees.forEach(emp => {
+        const standard = getVisitStandard(emp.maNV); // KEY:8, 7 ký tự:20
+        let hasNotEnough = false;
+        
+        emp.visitDetails.forEach((visit, idx) => {
+            const att = emp.attendanceDetails[idx];
+            const hasFull = att && att.hasFullAttendance === true;
+            if (hasFull && visit.count < standard) {
+                totalNotEnoughVisits++;
+                hasNotEnough = true;
+            }
+        });
+        
+        if (hasNotEnough) peopleWithNotEnough.add(emp.maNV);
+    });
+    
+    return {
+        totalNotEnoughVisits: totalNotEnoughVisits,
+        notEnoughPeopleCount: peopleWithNotEnough.size
+    };
+}
+
+// Tính thống kê viếng thăm cho giám sát (mã 4 ký tự)
+// Yêu cầu: không đủ 12 ngày >=5 viếng thăm/ngày trong 1 tháng
+function calculateVisitStatsForSupervisor(employees) {
+    let totalNotEnoughVisits = 0; // tổng số ngày không đủ
+    let peopleWithNotEnough = new Set(); // người không đủ chuẩn
+    
+    employees.forEach(emp => {
+        let daysWithEnoughVisit = 0;
+        let daysWithFullAttendance = 0;
+        let notEnoughDays = 0;
+        
+        emp.visitDetails.forEach((visit, idx) => {
+            const att = emp.attendanceDetails[idx];
+            const hasFull = att && att.hasFullAttendance === true;
+            if (hasFull) {
+                daysWithFullAttendance++;
+                if (visit.count >= 5) {
+                    daysWithEnoughVisit++;
+                } else {
+                    notEnoughDays++;
+                }
+            }
+        });
+        
+        totalNotEnoughVisits += notEnoughDays;
+        
+        // Cần 12 ngày trong tháng đạt >=5 lượt/ngày
+        if (daysWithEnoughVisit < 12 && daysWithFullAttendance > 0) {
+            peopleWithNotEnough.add(emp.maNV);
+        }
+    });
+    
+    return {
+        totalNotEnoughVisits: totalNotEnoughVisits,
+        notEnoughPeopleCount: peopleWithNotEnough.size
+    };
+}
+
+// Lấy dữ liệu theo khu vực cho biểu đồ 1 và 2
+function getStatsByArea(type) {
+    const areas = [...new Set(reportData.map(r => r.area))].sort();
+    const result = {};
+    
+    areas.forEach(area => {
+        const employeesInArea = reportData.filter(emp => emp.area === area);
+        let targetEmployees = [];
+        
+        if (type === 'staff') {
+            targetEmployees = employeesInArea.filter(emp => 
+                (emp.maNV.includes('.') && emp.maNV.length >= 7) || emp.maNV.startsWith('KEY')
+            );
+        } else if (type === 'supervisor') {
+            targetEmployees = employeesInArea.filter(emp => 
+                emp.maNV.length === 4 && emp.maNV.startsWith('A') && !emp.maNV.includes('.')
+            );
+        }
+        
+        const lateEarly = calculateLateEarlyStats(targetEmployees);
+        let visitStats = {};
+        
+        if (type === 'staff') {
+            visitStats = calculateVisitStatsForStaff(targetEmployees);
+        } else {
+            visitStats = calculateVisitStatsForSupervisor(targetEmployees);
+        }
+        
+        result[area] = {
+            totalLateEarlyCount: lateEarly.totalLateEarlyCount,
+            peopleWithLateEarlyCount: lateEarly.peopleWithLateEarlyCount,
+            totalNotEnoughVisits: visitStats.totalNotEnoughVisits,
+            notEnoughPeopleCount: visitStats.notEnoughPeopleCount,
+            totalEmployees: targetEmployees.length
+        };
+    });
+    
+    return result;
+}
+
+// Lấy dữ liệu theo NPP trong khu vực (biểu đồ 3)
+function getStatsByNPPInArea(area) {
+    const npps = {};
+    
+    reportData.forEach(emp => {
+        if (emp.area !== area) return;
+        // Chỉ lấy nhân viên (7 ký tự hoặc KEY)
+        const isStaff = (emp.maNV.includes('.') && emp.maNV.length >= 7) || emp.maNV.startsWith('KEY');
+        if (!isStaff) return;
+        
+        if (!npps[emp.maDonVi]) {
+            npps[emp.maDonVi] = [];
+        }
+        npps[emp.maDonVi].push(emp);
+    });
+    
+    const result = {};
+    for (const [npp, employees] of Object.entries(npps)) {
+        const lateEarly = calculateLateEarlyStats(employees);
+        const visitStats = calculateVisitStatsForStaff(employees);
+        
+        result[npp] = {
+            totalLateEarlyCount: lateEarly.totalLateEarlyCount,
+            peopleWithLateEarlyCount: lateEarly.peopleWithLateEarlyCount,
+            totalNotEnoughVisits: visitStats.totalNotEnoughVisits,
+            notEnoughPeopleCount: visitStats.notEnoughPeopleCount,
+            totalEmployees: employees.length
+        };
+    }
+    
+    return result;
+}
+
+// Vẽ biểu đồ
+let chart1, chart2, chart3;
+
+// Đăng ký plugin datalabels
+Chart.register(ChartDataLabels);
+
+// Cấu hình chung cho hiển thị số trên cột
+const datalabelsConfig = {
+    plugin: {
+        datalabels: {
+            anchor: 'end',
+            align: 'top',
+            offset: 4,
+            color: '#333',
+            backgroundColor: 'rgba(255,255,255,0.8)',
+            borderRadius: 4,
+            padding: { left: 4, right: 4, top: 2, bottom: 2 },
+            font: { weight: 'bold', size: 11 },
+            formatter: (value) => value > 0 ? value : ''
+        }
+    }
+};
+
+function renderOverview() {
+    const staffByArea = getStatsByArea('staff');
+    const supervisorByArea = getStatsByArea('supervisor');
+    const areas = Object.keys(staffByArea).sort();
+    
+    const defaultArea = areas.length > 0 ? areas[0] : '';
+    const nppData = defaultArea ? getStatsByNPPInArea(defaultArea) : {};
+    
+    let html = `
+        <!-- BIỂU ĐỒ 1: Theo khu vực - Nhân viên -->
+        <div class="chart-container">
+            <h3>📊 Biểu đồ 1: Thống kê theo KHU VỰC (Nhân viên - mã 7 ký tự & KEY)</h3>
+            <div class="chart-row">
+                <div class="chart-box">
+                    <canvas id="chart1LateEarly"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chart1Visit"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BIỂU ĐỒ 2: Theo khu vực - Giám sát -->
+        <div class="chart-container">
+            <h3>📊 Biểu đồ 2: Thống kê theo KHU VỰC (Giám sát - mã 4 ký tự)</h3>
+            <div class="chart-row">
+                <div class="chart-box">
+                    <canvas id="chart2LateEarly"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chart2Visit"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BIỂU ĐỒ 3: Chọn khu vực - Chi tiết theo NPP -->
+        <div class="chart-container">
+            <h3>📊 Biểu đồ 3: Chi tiết theo NPP trong khu vực (Nhân viên)</h3>
+            <div class="filter-kv">
+                <label>🏢 Chọn khu vực:</label>
+                <select id="areaForChart3">
+                    ${areas.map(a => `<option value="${a}" ${a === defaultArea ? 'selected' : ''}>${a}</option>`).join('')}
+                </select>
+            </div>
+            <div class="chart-row">
+                <div class="chart-box">
+                    <canvas id="chart3LateEarly"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chart3Visit"></canvas>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('overviewContent').innerHTML = html;
+    
+    // ========== BIỂU ĐỒ 1: Nhân viên theo KV ==========
+    const staffAreas = Object.keys(staffByArea);
+    const staffLateEarlyCounts = staffAreas.map(a => staffByArea[a].totalLateEarlyCount);
+    const staffPeopleLateEarly = staffAreas.map(a => staffByArea[a].peopleWithLateEarlyCount);
+    const staffTotalNotEnoughVisits = staffAreas.map(a => staffByArea[a].totalNotEnoughVisits);
+    const staffNotEnoughPeople = staffAreas.map(a => staffByArea[a].notEnoughPeopleCount);
+    
+    if (chart1) chart1.destroy();
+    if (chart2) chart2.destroy();
+    
+    const ctx1a = document.getElementById('chart1LateEarly').getContext('2d');
+    chart1 = new Chart(ctx1a, {
+        type: 'bar',
+        data: {
+            labels: staffAreas,
+            datasets: [
+                { label: 'Số lần vào muộn/về sớm', data: staffLateEarlyCounts, backgroundColor: '#ff6b6b', borderRadius: 8 },
+                { label: 'Số người vào muộn/về sớm', data: staffPeopleLateEarly, backgroundColor: '#ffa502', borderRadius: 8 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'top' },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 4,
+                    color: '#333',
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    borderRadius: 4,
+                    padding: { left: 4, right: 4, top: 2, bottom: 2 },
+                    font: { weight: 'bold', size: 11 },
+                    formatter: (value) => value > 0 ? value : ''
+                }
+            }
+        }
+    });
+    
+    const ctx1b = document.getElementById('chart1Visit').getContext('2d');
+    new Chart(ctx1b, {
+        type: 'bar',
+        data: {
+            labels: staffAreas,
+            datasets: [
+                { label: 'Số lần viếng thăm KHÔNG ĐỦ', data: staffTotalNotEnoughVisits, backgroundColor: '#ff4757', borderRadius: 8 },
+                { label: 'Số người viếng thăm KHÔNG ĐỦ', data: staffNotEnoughPeople, backgroundColor: '#ff6b6b', borderRadius: 8 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'top' },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 4,
+                    color: '#333',
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    borderRadius: 4,
+                    padding: { left: 4, right: 4, top: 2, bottom: 2 },
+                    font: { weight: 'bold', size: 11 },
+                    formatter: (value) => value > 0 ? value : ''
+                }
+            }
+        }
+    });
+    
+    // ========== BIỂU ĐỒ 2: Giám sát theo KV ==========
+    const supAreas = Object.keys(supervisorByArea);
+    const supLateEarlyCounts = supAreas.map(a => supervisorByArea[a]?.totalLateEarlyCount || 0);
+    const supPeopleLateEarly = supAreas.map(a => supervisorByArea[a]?.peopleWithLateEarlyCount || 0);
+    const supTotalNotEnoughVisits = supAreas.map(a => supervisorByArea[a]?.totalNotEnoughVisits || 0);
+    const supNotEnoughPeople = supAreas.map(a => supervisorByArea[a]?.notEnoughPeopleCount || 0);
+    
+    const ctx2a = document.getElementById('chart2LateEarly').getContext('2d');
+    new Chart(ctx2a, {
+        type: 'bar',
+        data: {
+            labels: supAreas,
+            datasets: [
+                { label: 'Số lần vào muộn/về sớm', data: supLateEarlyCounts, backgroundColor: '#ff6b6b', borderRadius: 8 },
+                { label: 'Số người vào muộn/về sớm', data: supPeopleLateEarly, backgroundColor: '#ffa502', borderRadius: 8 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'top' },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 4,
+                    color: '#333',
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    borderRadius: 4,
+                    padding: { left: 4, right: 4, top: 2, bottom: 2 },
+                    font: { weight: 'bold', size: 11 },
+                    formatter: (value) => value > 0 ? value : ''
+                }
+            }
+        }
+    });
+    
+    const ctx2b = document.getElementById('chart2Visit').getContext('2d');
+    new Chart(ctx2b, {
+        type: 'bar',
+        data: {
+            labels: supAreas,
+            datasets: [
+                { label: 'Số lần viếng thăm KHÔNG ĐỦ', data: supTotalNotEnoughVisits, backgroundColor: '#ff4757', borderRadius: 8 },
+                { label: 'Số người viếng thăm KHÔNG ĐỦ', data: supNotEnoughPeople, backgroundColor: '#ff6b6b', borderRadius: 8 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'top' },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 4,
+                    color: '#333',
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    borderRadius: 4,
+                    padding: { left: 4, right: 4, top: 2, bottom: 2 },
+                    font: { weight: 'bold', size: 11 },
+                    formatter: (value) => value > 0 ? value : ''
+                }
+            }
+        }
+    });
+    
+    // Biểu đồ 3 - khởi tạo
+    renderChart3(defaultArea);
+    
+    // Sự kiện đổi khu vực cho biểu đồ 3
+    document.getElementById('areaForChart3').addEventListener('change', (e) => {
+        renderChart3(e.target.value);
+    });
+}
+
+function renderChart3(area) {
+    const nppData = getStatsByNPPInArea(area);
+    const nppNames = Object.keys(nppData);
+    const lateEarlyCounts = nppNames.map(n => nppData[n].totalLateEarlyCount);
+    const peopleLateEarly = nppNames.map(n => nppData[n].peopleWithLateEarlyCount);
+    const totalNotEnoughVisits = nppNames.map(n => nppData[n].totalNotEnoughVisits);
+    const notEnoughPeople = nppNames.map(n => nppData[n].notEnoughPeopleCount);
+    
+    if (chart3) chart3.destroy();
+    
+    const ctx3a = document.getElementById('chart3LateEarly').getContext('2d');
+    chart3 = new Chart(ctx3a, {
+        type: 'bar',
+        data: {
+            labels: nppNames,
+            datasets: [
+                { label: 'Số lần vào muộn/về sớm', data: lateEarlyCounts, backgroundColor: '#ff6b6b', borderRadius: 8 },
+                { label: 'Số người vào muộn/về sớm', data: peopleLateEarly, backgroundColor: '#ffa502', borderRadius: 8 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'top' },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 4,
+                    color: '#333',
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    borderRadius: 4,
+                    padding: { left: 4, right: 4, top: 2, bottom: 2 },
+                    font: { weight: 'bold', size: 11 },
+                    formatter: (value) => value > 0 ? value : ''
+                }
+            }
+        }
+    });
+    
+    const ctx3b = document.getElementById('chart3Visit').getContext('2d');
+    new Chart(ctx3b, {
+        type: 'bar',
+        data: {
+            labels: nppNames,
+            datasets: [
+                { label: 'Số lần viếng thăm KHÔNG ĐỦ', data: totalNotEnoughVisits, backgroundColor: '#ff4757', borderRadius: 8 },
+                { label: 'Số người viếng thăm KHÔNG ĐỦ', data: notEnoughPeople, backgroundColor: '#ff6b6b', borderRadius: 8 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'top' },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 4,
+                    color: '#333',
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    borderRadius: 4,
+                    padding: { left: 4, right: 4, top: 2, bottom: 2 },
+                    font: { weight: 'bold', size: 11 },
+                    formatter: (value) => value > 0 ? value : ''
+                }
+            }
+        }
+    });
+}
+// ==================== HÀM PHỤ TRỢ CHO BIỂU ĐỒ 4 & 5 ====================
+
+// Lấy top 5 nhân viên có số lần vào muộn/về sớm cao nhất theo khu vực
+function getTop5StaffLateEarlyByArea(area) {
+    let employees = reportData.filter(emp => emp.area === area);
+    
+    // Lọc nhân viên (7 ký tự hoặc KEY)
+    employees = employees.filter(emp => 
+        (emp.maNV.includes('.') && emp.maNV.length >= 7) || emp.maNV.startsWith('KEY')
+    );
+    
+    // Tính số lần vào muộn/về sớm cho từng nhân viên
+    const employeesWithCount = employees.map(emp => {
+        let lateEarlyCount = 0;
+        emp.attendanceDetails.forEach(att => {
+            if (att.isLate || att.isEarly) {
+                lateEarlyCount++;
+            }
+        });
+        return {
+            maNV: emp.maNV,
+            tenNV: emp.tenNV,
+            count: lateEarlyCount
+        };
+    });
+    
+    // Sắp xếp giảm dần và lấy top 5
+    return employeesWithCount.sort((a, b) => b.count - a.count).slice(0, 5);
+}
+
+// Lấy top 5 nhân viên có số lần viếng thăm không đủ cao nhất theo khu vực
+function getTop5StaffNotEnoughVisitByArea(area) {
+    let employees = reportData.filter(emp => emp.area === area);
+    
+    // Lọc nhân viên (7 ký tự hoặc KEY)
+    employees = employees.filter(emp => 
+        (emp.maNV.includes('.') && emp.maNV.length >= 7) || emp.maNV.startsWith('KEY')
+    );
+    
+    // Tính số lần viếng thăm không đủ cho từng nhân viên
+    const employeesWithCount = employees.map(emp => {
+        const standard = getVisitStandard(emp.maNV); // KEY:8, 7 ký tự:20
+        let notEnoughCount = 0;
+        
+        emp.visitDetails.forEach((visit, idx) => {
+            const att = emp.attendanceDetails[idx];
+            const hasFull = att && att.hasFullAttendance === true;
+            if (hasFull && visit.count < standard) {
+                notEnoughCount++;
+            }
+        });
+        
+        return {
+            maNV: emp.maNV,
+            tenNV: emp.tenNV,
+            count: notEnoughCount
+        };
+    });
+    
+    // Sắp xếp giảm dần và lấy top 5
+    return employeesWithCount.sort((a, b) => b.count - a.count).slice(0, 5);
+}
+
+// Lấy top 5 giám sát có số lần vào muộn/về sớm cao nhất theo khu vực
+function getTop5SupervisorLateEarlyByArea(area) {
+    let employees = reportData.filter(emp => emp.area === area);
+    
+    // Lọc giám sát (mã 4 ký tự Axxx)
+    employees = employees.filter(emp => 
+        emp.maNV.length === 4 && emp.maNV.startsWith('A') && !emp.maNV.includes('.')
+    );
+    
+    // Tính số lần vào muộn/về sớm cho từng giám sát
+    const supervisorsWithCount = employees.map(emp => {
+        let lateEarlyCount = 0;
+        emp.attendanceDetails.forEach(att => {
+            if (att.isLate || att.isEarly) {
+                lateEarlyCount++;
+            }
+        });
+        return {
+            maNV: emp.maNV,
+            tenNV: emp.tenNV,
+            count: lateEarlyCount
+        };
+    });
+    
+    // Sắp xếp giảm dần và lấy top 5
+    return supervisorsWithCount.sort((a, b) => b.count - a.count).slice(0, 5);
+}
+
+// Lấy top 5 giám sát có số lần viếng thăm không đủ cao nhất theo khu vực
+function getTop5SupervisorNotEnoughVisitByArea(area) {
+    let employees = reportData.filter(emp => emp.area === area);
+    
+    // Lọc giám sát (mã 4 ký tự Axxx)
+    employees = employees.filter(emp => 
+        emp.maNV.length === 4 && emp.maNV.startsWith('A') && !emp.maNV.includes('.')
+    );
+    
+    // Tính số lần viếng thăm không đủ cho từng giám sát
+    const supervisorsWithCount = employees.map(emp => {
+        let notEnoughCount = 0;
+        
+        emp.visitDetails.forEach((visit, idx) => {
+            const att = emp.attendanceDetails[idx];
+            const hasFull = att && att.hasFullAttendance === true;
+            // Giám sát cần >=5 lượt/ngày mới đủ
+            if (hasFull && visit.count < 5) {
+                notEnoughCount++;
+            }
+        });
+        
+        return {
+            maNV: emp.maNV,
+            tenNV: emp.tenNV,
+            count: notEnoughCount
+        };
+    });
+    
+    // Sắp xếp giảm dần và lấy top 5
+    return supervisorsWithCount.sort((a, b) => b.count - a.count).slice(0, 5);
+}
+
+
+// Cập nhật hàm loadData 
+async function loadData() {
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
+    const loadBtn = document.getElementById('loadReportBtn');
+    
+    loadBtn.disabled = true;
+    loadBtn.textContent = '⏳ Đang tải...';
+    
+    document.getElementById('detailContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Đang tải dữ liệu...</p></div>';
+    document.getElementById('overviewContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Đang tải dữ liệu...</p></div>';
+    
+    try {
+        await fetchEmployees();
+        await fetchTimesheet(fromDate, toDate);
+        processReport();
+        window.reportData = reportData;
+        
+        const areaSelect = document.getElementById('areaFilter');
+        const employeeSelect = document.getElementById('employeeFilter');
+        const areas = [...new Set(reportData.map(r => r.area))];
+        areaSelect.innerHTML = '<option value="all">Tất cả</option>' + areas.map(a => `<option value="${a}">${a}</option>`).join('');
+        employeeSelect.innerHTML = '<option value="all">Tất cả</option>' + reportData.map(e => `<option value="${e.maNV}">${e.tenNV} (${e.maNV})</option>`).join('');
+        
+        renderDetail();
+        renderOverview(); // THÊM DÒNG NÀY
+    } catch (error) {
+        const errorHtml = `<div class="error"><strong>❌ Lỗi tải dữ liệu:</strong><br>${error.message}<br>Vui lòng kiểm tra kết nối và thử lại.</div>`;
+        document.getElementById('detailContent').innerHTML = errorHtml;
+        document.getElementById('overviewContent').innerHTML = errorHtml;
+    } finally {
+        loadBtn.disabled = false;
+        loadBtn.textContent = '🔍 Xem báo cáo';
+    }
+}
+
+// Chuyển tab
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+        btn.classList.add('active');
+        const tabId = btn.getAttribute('data-tab');
+        document.getElementById(`${tabId}Tab`).style.display = 'block';
+        
+        // Nếu là tab overview và đã có dữ liệu thì vẽ lại biểu đồ
+        if (tabId === 'overview' && window.reportData && window.reportData.length > 0) {
+            renderOverview();
+        }
+    });
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('currentDate').innerText = new Date().toLocaleString('vi-VN');
     

@@ -4,8 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Báo cáo Chấm công & Viếng thăm - Mobiwork (2 cột)</title>
+    <title>Báo cáo Chấm công & Viếng thăm - Mobiwork</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Thêm thư viện hiển thị số trên cột -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script
+    <!-- Chart.js cho biểu đồ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -40,12 +45,28 @@
         <div class="progress-text" id="progressText">Đang tải dữ liệu...</div>
     </div>
 
-    <!-- Bảng báo cáo CHÍNH: 2 cột rõ ràng -->
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="detail">📋 Chi tiết (Bảng dữ liệu)</button>
+        <button class="tab-btn" data-tab="overview">📊 Tổng quan (Biểu đồ)</button>
+    </div>
+
+    <!-- TAB CHI TIẾT -->
     <div id="detailTab" class="tab-content active">
         <div id="detailContent">
             <div class="loading">
                 <div class="spinner"></div>
                 <p>Vui lòng nhấn "Xem báo cáo" để tải dữ liệu...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB TỔNG QUAN -->
+    <div id="overviewTab" class="tab-content" style="display:none;">
+        <div id="overviewContent">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Đang tải biểu đồ...</p>
             </div>
         </div>
     </div>
