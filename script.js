@@ -21,9 +21,9 @@ const AREA_MAPPING = [
     ['NPP Dương Minh', 'KV4'], ['NPP Dũng Béo', 'KV4'], ['NPP Hưng Thịnh', 'KV4'],
     ['NPP Ngọc Phúc', 'KV4'], ['NPP Nguyễn Đình Hân', 'KV4'], ['NPP Tân Thúy', 'KV4'],
     ['NPP Thăng Hương', 'KV4'], ['NPP Thảo Thắng', 'KV4'], ['NPP Tùng Phương', 'KV4'],
-    ['NPP Đồng Lợi', 'KV5'],['NPP Anh Đức', 'KV5'], ['NPP Hải Hằng', 'KV5'], ['NPP Hiền Cường', 'KV5'],
+    ['NPP Đồng Lợi', 'KV5'],['NPP Đồng Lợi', 'KV5'], ['NPP Hải Hằng', 'KV5'], ['NPP Hiền Cường', 'KV5'],
     ['NPP Hoàng Minh', 'KV5'], ['NPP Oanh Định', 'KV5'], ['NPP Sơn Lâm', 'KV5'],
-    ['NPP Thái Hoà', 'KV5'], ['NPP Thảo Xuân', 'KV5'], ['NPP Tiên Lan', 'KV5'],
+    ['NPP Thái Hoà', 'KV5'], ['NPP Thảo Xuân', 'KV5'], ['NPP Duy Khoa', 'KV5'],
     ['NPP Tuấn Vân', 'KV5'], ['NPP Vũ Đức Nam', 'KV5'], ['NPP Anh Minh HT', 'KV6'],
     ['NPP Hà Thanh', 'KV6'], ['NPP Hồng Đức', 'KV6'], ['NPP Linh Trang', 'KV6'],
     ['NPP Mạnh Hà 1', 'KV6'], ['NPP Mạnh Hà 2', 'KV6'], ['NPP Minh Châu', 'KV6'],
@@ -1043,7 +1043,7 @@ function renderOverview() {
     let html = `
         <!-- BIỂU ĐỒ 1: Theo khu vực - Nhân viên -->
         <div class="chart-container">
-            <h3>📊 Biểu đồ 1: Thống kê theo KHU VỰC (Nhân viên - mã 7 ký tự & KEY)</h3>
+            <h3>📊 Biểu đồ 1: Thống kê theo KHU VỰC (Nhân viên)</h3>
             <div class="chart-row">
                 <div class="chart-box">
                     <canvas id="chart1LateEarly"></canvas>
@@ -1056,7 +1056,7 @@ function renderOverview() {
         
         <!-- BIỂU ĐỒ 2: Theo khu vực - Giám sát -->
         <div class="chart-container">
-            <h3>📊 Biểu đồ 2: Thống kê theo KHU VỰC (Giám sát - mã 4 ký tự)</h3>
+            <h3>📊 Biểu đồ 2: Thống kê theo KHU VỰC (Giám sát)</h3>
             <div class="chart-row">
                 <div class="chart-box">
                     <canvas id="chart2LateEarly"></canvas>
