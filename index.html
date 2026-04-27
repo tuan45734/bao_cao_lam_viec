@@ -7,10 +7,7 @@
     <title>Báo cáo Chấm công & Viếng thăm - Mobiwork</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<!-- Thêm thư viện hiển thị số trên cột -->
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script
-    <!-- Chart.js cho biểu đồ -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -33,6 +30,10 @@
             <select id="areaFilter"><option value="all">Tất cả</option></select>
         </div>
         <div class="filter-group">
+            <label>🏪 NPP</label>
+            <select id="nppFilter"><option value="all">Tất cả</option></select>
+        </div>
+        <div class="filter-group">
             <label>👤 Nhân viên</label>
             <select id="employeeFilter"><option value="all">Tất cả</option></select>
         </div>
@@ -45,13 +46,11 @@
         <div class="progress-text" id="progressText">Đang tải dữ liệu...</div>
     </div>
 
-    <!-- TABS -->
     <div class="tabs">
         <button class="tab-btn active" data-tab="detail">📋 Chi tiết (Bảng dữ liệu)</button>
         <button class="tab-btn" data-tab="overview">📊 Tổng quan (Biểu đồ)</button>
     </div>
 
-    <!-- TAB CHI TIẾT -->
     <div id="detailTab" class="tab-content active">
         <div id="detailContent">
             <div class="loading">
@@ -61,7 +60,6 @@
         </div>
     </div>
 
-    <!-- TAB TỔNG QUAN -->
     <div id="overviewTab" class="tab-content" style="display:none;">
         <div id="overviewContent">
             <div class="loading">
@@ -72,9 +70,12 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="visitData.js"></script>
-<script src="script.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-<script src="excelExport.js"></script>
+<script src="js/main.js"></script>
+<script src="js/filters.js"></script>
+<script src="js/detailTab.js"></script>
+<script src="js/overviewTab.js"></script>
 </body>
 </html>
