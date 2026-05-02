@@ -55,7 +55,7 @@
         <div id="detailContent">
             <div class="loading">
                 <div class="spinner"></div>
-                <p>Vui lòng nhấn "Xem báo cáo" để tải dữ liệu...</p>
+                <p>Đang tải...</p>
             </div>
         </div>
     </div>
@@ -64,7 +64,7 @@
         <div id="overviewContent">
             <div class="loading">
                 <div class="spinner"></div>
-                <p>Đang tải biểu đồ...</p>
+                <p>Đang tải...</p>
             </div>
         </div>
     </div>
@@ -73,9 +73,25 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="visitData.js"></script>
+<script src="js/login.js"></script>
 <script src="js/main.js"></script>
 <script src="js/filters.js"></script>
 <script src="js/detailTab.js"></script>
 <script src="js/overviewTab.js"></script>
+
+<script>
+    // Khởi động kiểm tra đăng nhập (KHÔNG tự động load báo cáo)
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('currentDate').innerText = new Date().toLocaleString('vi-VN');
+        // Hiển thị thông báo chờ đăng nhập
+        document.getElementById('detailContent').innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Vui lòng đăng nhập để sử dụng hệ thống</p>
+            </div>
+        `;
+        checkSessionAndInit();
+    });
+</script>
 </body>
 </html>

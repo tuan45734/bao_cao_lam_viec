@@ -588,7 +588,16 @@ function processReport() {
 
 // Export Excel function
 function exportExcelReport() {
-    const filtered = getFilteredData();
+    // Lấy dữ liệu đã được filter theo quyền
+    let filtered = getFilteredData();
+    
+    // Áp dụng thêm filter khu vực từ quyền user
+    if (!isAdmin()) {
+        const userArea = getUserArea();
+        if (userArea) {
+            filtered = filtered.filter(emp => emp.area === userArea);
+        }
+    }
     
     if (!filtered || filtered.length === 0) {
         alert('Không có dữ liệu để xuất. Vui lòng nhấn "Xem báo cáo" trước khi xuất Excel.');
@@ -911,6 +920,7 @@ function getWorkingDaysCount(emp) {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('currentDate').innerText = new Date().toLocaleString('vi-VN');
     
+    // Gán sự kiện cho nút Xem báo cáo
     document.getElementById('loadReportBtn').addEventListener('click', async () => {
         const fromDate = document.getElementById('fromDate').value;
         const toDate = document.getElementById('toDate').value;
@@ -920,7 +930,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBtn.textContent = '⏳ Đang tải...';
         
         document.getElementById('detailContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Đang tải dữ liệu...</p></div>';
-        document.getElementById('overviewContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Đang tải dữ liệu...</p></div>';
+        if (isAdmin()) {
+            document.getElementById('overviewContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Đang tải dữ liệu...</p></div>';
+        }
         
         try {
             await fetchEmployees();
@@ -932,29 +944,41 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Render các tab
             renderDetail();
-            renderOverview();
+            if (isAdmin()) {
+                renderOverview();
+            }
         } catch (error) {
             const errorHtml = `<div class="error"><strong>❌ Lỗi tải dữ liệu:</strong><br>${error.message}<br>Vui lòng kiểm tra kết nối và thử lại.</div>`;
             document.getElementById('detailContent').innerHTML = errorHtml;
-            document.getElementById('overviewContent').innerHTML = errorHtml;
+            if (isAdmin()) {
+                document.getElementById('overviewContent').innerHTML = errorHtml;
+            }
         } finally {
             loadBtn.disabled = false;
             loadBtn.textContent = '🔍 Xem báo cáo';
         }
     });
     
+    // Gán sự kiện cho nút Excel
     document.getElementById('exportExcelBtn').addEventListener('click', exportExcelReport);
     
-    // Chuyển tab
+    // Chuyển tab - chỉ cho admin xem tab overview
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            const tabId = btn.getAttribute('data-tab');
+            
+            // Nếu không phải admin và chọn tab overview thì không cho phép
+            if (!isAdmin() && tabId === 'overview') {
+                alert('⚠️ Chỉ quản trị viên mới có quyền xem biểu đồ tổng quan!');
+                return;
+            }
+            
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
             btn.classList.add('active');
-            const tabId = btn.getAttribute('data-tab');
             document.getElementById(`${tabId}Tab`).style.display = 'block';
             
-            if (tabId === 'overview' && reportData && reportData.length > 0) {
+            if (tabId === 'overview' && reportData && reportData.length > 0 && isAdmin()) {
                 renderOverview();
             }
         });

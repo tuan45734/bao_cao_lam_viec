@@ -1,4 +1,4 @@
-// filters.js - Quản lý bộ lọc
+// filters.js - Quản lý bộ lọc (cập nhật thêm phân quyền)
 
 function getFilteredData() {
     const area = document.getElementById('areaFilter').value;
@@ -7,9 +7,18 @@ function getFilteredData() {
     
     let filtered = reportData;
     
-    if (area !== 'all') {
-        filtered = filtered.filter(emp => emp.area === area);
+    // Áp dụng filter khu vực với phân quyền
+    if (!isAdmin()) {
+        const userArea = getUserArea();
+        if (userArea) {
+            filtered = filtered.filter(emp => emp.area === userArea);
+        }
+    } else {
+        if (area !== 'all') {
+            filtered = filtered.filter(emp => emp.area === area);
+        }
     }
+    
     if (npp !== 'all') {
         filtered = filtered.filter(emp => emp.maDonVi === npp);
     }
@@ -25,30 +34,68 @@ function initFilters() {
     const nppSelect = document.getElementById('nppFilter');
     const employeeSelect = document.getElementById('employeeFilter');
     
-    const areas = [...new Set(reportData.map(r => r.area))];
-    areaSelect.innerHTML = '<option value="all">Tất cả</option>' + areas.map(a => `<option value="${a}">${a}</option>`).join('');
+    // Lấy danh sách khu vực dựa trên quyền
+    let allAreas = [...new Set(reportData.map(r => r.area))];
+    
+    if (!isAdmin()) {
+        const userArea = getUserArea();
+        if (userArea) {
+            allAreas = allAreas.filter(area => area === userArea);
+        }
+    }
+    
+    areaSelect.innerHTML = '<option value="all">Tất cả</option>' + allAreas.sort().map(a => `<option value="${a}">${a}</option>`).join('');
+    
+    // Nếu không phải admin, disable select khu vực
+    if (!isAdmin() && allAreas.length === 1) {
+        areaSelect.disabled = true;
+        areaSelect.value = allAreas[0];
+        areaSelect.style.opacity = '0.7';
+        areaSelect.title = 'Bạn chỉ có quyền xem khu vực này';
+    } else if (!isAdmin()) {
+        areaSelect.disabled = true;
+        areaSelect.style.opacity = '0.7';
+        areaSelect.title = 'Bạn chỉ có quyền xem khu vực của mình';
+        if (allAreas.length > 0) {
+            areaSelect.value = allAreas[0];
+        }
+    } else {
+        areaSelect.disabled = false;
+        areaSelect.style.opacity = '1';
+        areaSelect.title = '';
+    }
     
     const updateNppFilter = () => {
-        const selectedArea = areaSelect.value;
+        let effectiveArea = areaSelect.value;
+        
+        if (!isAdmin() && getUserArea()) {
+            effectiveArea = getUserArea();
+        }
+        
         let npps = [];
-        if (selectedArea === 'all') {
+        if (effectiveArea === 'all') {
             npps = [...new Set(reportData.map(r => r.maDonVi))];
         } else {
-            npps = [...new Set(reportData.filter(r => r.area === selectedArea).map(r => r.maDonVi))];
+            npps = [...new Set(reportData.filter(r => r.area === effectiveArea).map(r => r.maDonVi))];
         }
+        
         nppSelect.innerHTML = '<option value="all">Tất cả</option>' + npps.sort().map(n => `<option value="${n}">${n}</option>`).join('');
         
-        // Cập nhật employee filter khi đổi khu vực/NPP
         updateEmployeeFilter();
     };
     
     const updateEmployeeFilter = () => {
-        const selectedArea = areaSelect.value;
+        let effectiveArea = areaSelect.value;
+        
+        if (!isAdmin() && getUserArea()) {
+            effectiveArea = getUserArea();
+        }
+        
         const selectedNpp = nppSelect.value;
         
         let employees = reportData;
-        if (selectedArea !== 'all') {
-            employees = employees.filter(e => e.area === selectedArea);
+        if (effectiveArea !== 'all') {
+            employees = employees.filter(e => e.area === effectiveArea);
         }
         if (selectedNpp !== 'all') {
             employees = employees.filter(e => e.maDonVi === selectedNpp);
@@ -61,18 +108,24 @@ function initFilters() {
     areaSelect.addEventListener('change', () => {
         updateNppFilter();
         renderDetail();
-        renderOverview();
+        if (isAdmin()) {
+            renderOverview();
+        }
     });
     
     nppSelect.addEventListener('change', () => {
         updateEmployeeFilter();
         renderDetail();
-        renderOverview();
+        if (isAdmin()) {
+            renderOverview();
+        }
     });
     
     employeeSelect.addEventListener('change', () => {
         renderDetail();
-        renderOverview();
+        if (isAdmin()) {
+            renderOverview();
+        }
     });
     
     updateNppFilter();
