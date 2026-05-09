@@ -139,7 +139,7 @@ function getVisitStandard(maNV) {
     if (maNV && maNV.length === 2 && maNV.startsWith('A')) return 0;
     if (maNV && maNV.length === 4 && maNV.startsWith('A')) return 5;
     if (maNV && maNV.startsWith('KEY')) return 8;
-    if (maNV && maNV.includes('.') && maNV.length >= 7) return 20;
+    if (maNV && maNV.includes('.') && maNV.length >= 7) return 25;
     return 0;
 }
 
