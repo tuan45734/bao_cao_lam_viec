@@ -36,7 +36,9 @@ const AREA_MAPPING = [
     ['NPP Minh Lộc', 'KV6'], ['NPP Nhung Tùng', 'KV6'], ['NPP Phương Hà', 'KV6'],
     ['NPP Tân Bích An', 'KV6'], ['NPP Thanh Bình', 'KV6'], ['NPP Thành Thanh', 'KV6'],
     ['NPP Thông Thơm', 'KV6'], ['NPP Trường Hằng', 'KV6'],
-    ['KV1', 'KV1'], ['KV2', 'KV2'], ['KV3', 'KV3'], ['KV4', 'KV4'], ['KV5', 'KV5'], ['KV6', 'KV6']
+    ['NPP Hiền Thuận', 'KV7'],['NPP Trung Nam', 'KV7'],['NPP Anh Viên', 'KV7'],['NPP Tường Vi', 'KV7'],['NPP Thúy Diễm', 'KV7'],
+['NPP Dương Thiên Nhi', 'KV7'],['NPP Minh Huy', 'KV7'],['NPP Tân Bảo Hân', 'KV7'],['NPP Nakoa', 'KV7'],['NPP Hoàng Gia Bảo', 'KV7'],
+    ['KV1', 'KV1'], ['KV2', 'KV2'], ['KV3', 'KV3'], ['KV4', 'KV4'], ['KV5', 'KV5'], ['KV6', 'KV6'], ['KV7', 'KV7']
 ];
 
 // ==================== HÀM TIỆN ÍCH ====================
