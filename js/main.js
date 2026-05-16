@@ -287,8 +287,9 @@ function checkVisitMonthlyError(visitsByDate, attendanceByDate, standard, requir
     return { dailyResults, missingDays, totalPenalty: missingDays };
 }
 
-function getVisitsFromHardcoded(maNV, fromDate, toDate) {
-    const visitRecord = HARDCODED_VISITS.find(v => v.ma_nhan_vien === maNV);
+function getVisitsFromRecords(maNV, fromDate, toDate) {
+    const maUpper = (maNV || '').toUpperCase();
+    const visitRecord = VISIT_RECORDS.find(v => (v.ma_nhan_vien || '').toUpperCase() === maUpper);
     if (!visitRecord) return new Map();
     
     const visitsByDate = new Map();
@@ -356,12 +357,25 @@ async function fetchTimesheet(fromDate, toDate) {
         
         if (data.status) {
             timesheetData = data.data;
-            updateProgress(60, `Đã lấy dữ liệu chấm công của ${timesheetData.length} nhân viên`);
+            updateProgress(55, `Đã lấy dữ liệu chấm công của ${timesheetData.length} nhân viên`);
             return timesheetData;
         }
         throw new Error(data.message);
     } catch (error) {
         console.error('Error fetching timesheet:', error);
+        throw error;
+    }
+}
+
+async function fetchVisits(fromDate, toDate) {
+    try {
+        updateProgress(60, 'Đang lấy dữ liệu viếng thăm...');
+        await delay(500);
+        const records = await fetchVisitData(fromDate, toDate);
+        updateProgress(75, `Đã lấy dữ liệu viếng thăm của ${records.length} nhân viên`);
+        return records;
+    } catch (error) {
+        console.error('Error fetching visits:', error);
         throw error;
     }
 }
@@ -443,7 +457,7 @@ function processReport() {
     
     for (const [maNV, emp] of employeeMap) {
         const attendance = attendanceMap.get(maNV) || { days: new Map(), errorCount: 0 };
-        const visitsByDate = getVisitsFromHardcoded(maNV, fromDate, toDate);
+        const visitsByDate = getVisitsFromRecords(maNV, fromDate, toDate);
         const empType = getEmployeeType(maNV);
         const visitStandard = getVisitStandard(maNV);
         
@@ -939,6 +953,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await fetchEmployees();
             await fetchTimesheet(fromDate, toDate);
+            await fetchVisits(fromDate, toDate);
             processReport();
             
             // Cập nhật filters
