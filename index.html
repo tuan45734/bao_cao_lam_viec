@@ -49,6 +49,7 @@
     <div class="tabs">
         <button class="tab-btn active" data-tab="detail">📋 Chi tiết (Bảng dữ liệu)</button>
         <button class="tab-btn" data-tab="overview">📊 Tổng quan (Biểu đồ)</button>
+        <button class="tab-btn" data-tab="baocao">📈 Báo cáo</button>
     </div>
 
     <div id="detailTab" class="tab-content active">
@@ -68,6 +69,15 @@
             </div>
         </div>
     </div>
+
+    <div id="baocaoTab" class="tab-content" style="display:none;">
+        <div id="baoCaoContent">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Đang tải...</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -78,6 +88,30 @@
 <script src="js/filters.js"></script>
 <script src="js/detailTab.js"></script>
 <script src="js/overviewTab.js"></script>
+<script src="js/baoCaoTab.js"></script>
+<script src="js/chatbot.js"></script>
+
+<div id="chatbot-toggle" title="AI Phân tích">🤖</div>
+
+<div id="chatbot-panel">
+    <div id="chatbot-header">
+        <span>🤖 AI Phân tích dữ liệu</span>
+        <span id="chatbot-close">✕</span>
+    </div>
+    <div id="chatbot-api-section">
+        <input type="password" id="chatbot-api-key" placeholder="Nhập Google AI API Key..." />
+        <button id="chatbot-save-key">Lưu</button>
+    </div>
+    <div id="chatbot-messages">
+        <div class="chat-msg ai">
+            <div class="msg-text">Xin chào! Tôi có thể phân tích dữ liệu báo cáo, đánh giá hiệu suất và trả lời câu hỏi của bạn.</div>
+        </div>
+    </div>
+    <div id="chatbot-input-area">
+        <input type="text" id="chatbot-input" placeholder="Nhập câu hỏi..." />
+        <button id="chatbot-send">Gửi</button>
+    </div>
+</div>
 
 <script>
     // Khởi động kiểm tra đăng nhập (KHÔNG tự động load báo cáo)

@@ -431,3 +431,248 @@ canvas {
 #simple-chart-tooltip {
     animation: tooltipFadeIn 0.15s ease;
 }
+
+/* Chatbot AI */
+#chatbot-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    z-index: 9999;
+    transition: transform 0.2s;
+}
+
+#chatbot-toggle:hover {
+    transform: scale(1.1);
+}
+
+#chatbot-panel {
+    position: fixed;
+    bottom: 90px;
+    right: 24px;
+    width: 380px;
+    max-height: 560px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    z-index: 9998;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+#chatbot-panel.open {
+    display: flex;
+}
+
+#chatbot-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+#chatbot-close {
+    cursor: pointer;
+    font-size: 18px;
+    opacity: 0.8;
+}
+
+#chatbot-close:hover {
+    opacity: 1;
+}
+
+#chatbot-api-section {
+    display: flex;
+    padding: 10px 14px;
+    gap: 8px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+#chatbot-api-key {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 12px;
+    outline: none;
+}
+
+#chatbot-api-key:focus {
+    border-color: #667eea;
+}
+
+#chatbot-save-key {
+    padding: 8px 14px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+#chatbot-save-key:hover {
+    background: #5a6fd6;
+}
+
+#chatbot-messages {
+    flex: 1;
+    padding: 14px;
+    overflow-y: auto;
+    max-height: 340px;
+    background: #f8fafc;
+}
+
+.chat-msg {
+    margin-bottom: 12px;
+    display: flex;
+}
+
+.chat-msg.user {
+    justify-content: flex-end;
+}
+
+.chat-msg .msg-text {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.chat-msg.ai .msg-text {
+    background: white;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    border-bottom-left-radius: 4px;
+}
+
+.chat-msg.user .msg-text {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+#chatbot-input-area {
+    display: flex;
+    padding: 10px 14px;
+    gap: 8px;
+    border-top: 1px solid #e2e8f0;
+    background: white;
+}
+
+#chatbot-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    font-size: 13px;
+    outline: none;
+}
+
+#chatbot-input:focus {
+    border-color: #667eea;
+}
+
+#chatbot-send {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+#chatbot-send:hover {
+    opacity: 0.9;
+}
+
+@keyframes chatDot {
+    0%, 80%, 100% { opacity: 0; }
+    40% { opacity: 1; }
+}
+
+.chat-dot {
+    font-size: 24px;
+    line-height: 0;
+    animation: chatDot 1.4s infinite;
+}
+
+.chat-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.chat-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+/* Bảng so sánh tuần trong tab Báo cáo */
+.baocao-week-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 16px;
+}
+
+.baocao-week-table th,
+.baocao-week-table td {
+    padding: 8px 10px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+
+.baocao-week-table th {
+    background: #f1f5f9;
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 11px;
+}
+
+.baocao-week-table td:first-child {
+    text-align: left;
+    min-width: 140px;
+}
+
+.baocao-week-table .num {
+    font-weight: 600;
+    min-width: 40px;
+}
+
+.baocao-week-table .up {
+    color: #e74c3c;
+}
+
+.baocao-week-table .down {
+    color: #27ae60;
+}
+
+.baocao-week-table .same {
+    color: #95a5a6;
+}
+
+.baocao-week-table .total {
+    background: #f8f9fa;
+    font-weight: 700;
+    color: #2c3e50;
+}

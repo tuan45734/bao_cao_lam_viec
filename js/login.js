@@ -179,15 +179,14 @@ function initAppAfterLogin() {
         header.appendChild(userInfo);
     }
     
-    // Ẩn tab Tổng quan nếu không phải admin
+    // Ẩn tab Tổng quan và Báo cáo nếu không phải admin
     if (!isAdmin()) {
-        const overviewTab = document.querySelector('.tab-btn[data-tab="overview"]');
-        if (overviewTab) {
-            overviewTab.style.display = 'none';
-        }
-        // Nếu đang ở tab overview, chuyển về detail
+        document.querySelectorAll('.tab-btn[data-tab="overview"], .tab-btn[data-tab="baocao"]').forEach(tab => {
+            tab.style.display = 'none';
+        });
+        // Nếu đang ở tab overview hoặc baocao, chuyển về detail
         const activeTab = document.querySelector('.tab-btn.active');
-        if (activeTab && activeTab.getAttribute('data-tab') === 'overview') {
+        if (activeTab && (activeTab.getAttribute('data-tab') === 'overview' || activeTab.getAttribute('data-tab') === 'baocao')) {
             const detailTab = document.querySelector('.tab-btn[data-tab="detail"]');
             if (detailTab) {
                 detailTab.click();
@@ -233,6 +232,12 @@ function initAppAfterLogin() {
         `;
     } else {
         document.getElementById('overviewContent').innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Vui lòng chọn khoảng thời gian và nhấn "Xem báo cáo"</p>
+            </div>
+        `;
+        document.getElementById('baoCaoContent').innerHTML = `
             <div class="loading">
                 <div class="spinner"></div>
                 <p>Vui lòng chọn khoảng thời gian và nhấn "Xem báo cáo"</p>

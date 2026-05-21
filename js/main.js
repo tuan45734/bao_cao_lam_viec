@@ -948,6 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('detailContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Đang tải dữ liệu...</p></div>';
         if (isAdmin()) {
             document.getElementById('overviewContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Đang tải dữ liệu...</p></div>';
+            document.getElementById('baoCaoContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Đang tải dữ liệu...</p></div>';
         }
         
         try {
@@ -963,12 +964,14 @@ document.addEventListener('DOMContentLoaded', () => {
             renderDetail();
             if (isAdmin()) {
                 renderOverview();
+                renderBaoCao();
             }
         } catch (error) {
             const errorHtml = `<div class="error"><strong>❌ Lỗi tải dữ liệu:</strong><br>${error.message}<br>Vui lòng kiểm tra kết nối và thử lại.</div>`;
             document.getElementById('detailContent').innerHTML = errorHtml;
             if (isAdmin()) {
                 document.getElementById('overviewContent').innerHTML = errorHtml;
+                document.getElementById('baoCaoContent').innerHTML = errorHtml;
             }
         } finally {
             loadBtn.disabled = false;
@@ -979,14 +982,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Gán sự kiện cho nút Excel
     document.getElementById('exportExcelBtn').addEventListener('click', exportExcelReport);
     
-    // Chuyển tab - chỉ cho admin xem tab overview
+    // Chuyển tab - chỉ cho admin xem tab overview và baocao
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.getAttribute('data-tab');
             
-            // Nếu không phải admin và chọn tab overview thì không cho phép
-            if (!isAdmin() && tabId === 'overview') {
-                alert('⚠️ Chỉ quản trị viên mới có quyền xem biểu đồ tổng quan!');
+            // Nếu không phải admin và chọn tab overview hoặc baocao thì không cho phép
+            if (!isAdmin() && (tabId === 'overview' || tabId === 'baocao')) {
+                alert('⚠️ Chỉ quản trị viên mới có quyền xem tab này!');
                 return;
             }
             
@@ -997,6 +1000,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (tabId === 'overview' && reportData && reportData.length > 0 && isAdmin()) {
                 renderOverview();
+            }
+            if (tabId === 'baocao' && reportData && reportData.length > 0 && isAdmin()) {
+                renderBaoCao();
             }
         });
     });
