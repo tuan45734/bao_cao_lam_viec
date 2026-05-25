@@ -8,6 +8,7 @@ const USERS = {
     'KV4YXY': { role: 'KV4', name: 'Quản lý KV4' },
     'KV5XXZ': { role: 'KV5', name: 'Quản lý KV5' },
     'KV6XBC': { role: 'KV6', name: 'Quản lý KV6' },
+    'KV7ZZA': { role: 'KV7', name: 'Quản lý KV7' },
     '99': { role: 'ADMIN', name: 'Quản trị viên' }
 };
 
