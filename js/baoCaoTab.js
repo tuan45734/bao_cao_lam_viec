@@ -37,6 +37,31 @@ const shadowPlugin = {
     }
 };
 
+const BAO_CAO_REGION_AREAS = {
+    north: ['KV1', 'KV2', 'KV3', 'KV4', 'KV5', 'KV6'],
+    central: ['KV7'],
+    south: []
+};
+
+function normalizeBaoCaoRegion(region) {
+    return ['all', 'north', 'central', 'south'].includes(region) ? region : 'all';
+}
+
+function getAreaRegion(area) {
+    if (!area) return null;
+    if (BAO_CAO_REGION_AREAS.north.includes(area)) return 'north';
+    if (BAO_CAO_REGION_AREAS.central.includes(area)) return 'central';
+    if (BAO_CAO_REGION_AREAS.south.includes(area)) return 'south';
+    return null;
+}
+
+function getAreasForRegion(region, allAreas) {
+    const normalizedRegion = normalizeBaoCaoRegion(region);
+    if (normalizedRegion === 'all') return allAreas;
+    const regionAreas = BAO_CAO_REGION_AREAS[normalizedRegion] || [];
+    return allAreas.filter(area => regionAreas.includes(area));
+}
+
 function getEmployeeGroup(maNV) {
     if (!maNV) return 'NV';
     const len = maNV.length;
@@ -74,15 +99,19 @@ function getMaxValueArr(data) {
     return Math.ceil(max * 1.1) || 5;
 }
 
-function getBaoCaoFilteredData(group, area, npp) {
+function getBaoCaoFilteredData(group, region, area, npp) {
     let data = group === 'ALL' ? reportData : reportData.filter(emp => getEmployeeGroup(emp.maNV) === group);
+    const normalizedRegion = normalizeBaoCaoRegion(region);
+    if (normalizedRegion !== 'all') {
+        data = data.filter(emp => getAreaRegion(emp.area) === normalizedRegion);
+    }
     if (area !== 'all') data = data.filter(emp => emp.area === area);
     if (npp !== 'all') data = data.filter(emp => emp.maDonVi === npp);
     return data;
 }
 
-function calculateGroupWeeklyStats(group, area, npp) {
-    const filtered = getBaoCaoFilteredData(group, area, npp);
+function calculateGroupWeeklyStats(group, region, area, npp) {
+    const filtered = getBaoCaoFilteredData(group, region, area, npp);
     const fromDate = document.getElementById('fromDate').value;
     const toDate = document.getElementById('toDate').value;
     const allDates = getAllDatesInRange(fromDate, toDate);
@@ -129,9 +158,10 @@ function calculateGroupWeeklyStats(group, area, npp) {
 }
 
 function renderGroupChart(group, canvasId, groupName) {
+    const region = document.getElementById('baocaoRegionFilter').value;
     const area = document.getElementById('baocaoAreaFilter').value;
     const npp = document.getElementById('baocaoNppFilter').value;
-    const weekStats = calculateGroupWeeklyStats(group, area, npp);
+    const weekStats = calculateGroupWeeklyStats(group, region, area, npp);
     const hasVisit = group === 'ALL' || group === 'NV';
 
     const weekLabels = weekStats.map(w => w.fullLabel);
@@ -318,25 +348,78 @@ function generateWeekTableHTML(weekStats, hasVisit) {
 }
 
 function initBaoCaoFilters() {
+    const regionSelect = document.getElementById('baocaoRegionFilter');
     const areaSelect = document.getElementById('baocaoAreaFilter');
     const nppSelect = document.getElementById('baocaoNppFilter');
 
     const areas = [...new Set(reportData.map(r => r.area))].sort();
-    areaSelect.innerHTML = '<option value="all">Tất cả khu vực</option>' +
-        areas.map(a => `<option value="${a}">${a}</option>`).join('');
+    regionSelect.innerHTML = `
+        <option value="all">Tất cả miền</option>
+        <option value="north">Miền Bắc</option>
+        <option value="central">Miền Trung</option>
+        <option value="south">Miền Nam</option>
+    `;
 
-    const updateNpp = () => {
-        const area = areaSelect.value;
-        let npps = area === 'all'
-            ? [...new Set(reportData.map(r => r.maDonVi))]
-            : [...new Set(reportData.filter(r => r.area === area).map(r => r.maDonVi))];
-        nppSelect.innerHTML = '<option value="all">Tất cả NPP</option>' +
-            npps.sort().map(n => `<option value="${n}">${n}</option>`).join('');
+    const updateArea = () => {
+        const region = normalizeBaoCaoRegion(regionSelect.value);
+        const filteredAreas = getAreasForRegion(region, areas);
+        if (filteredAreas.length === 0) {
+            areaSelect.innerHTML = '<option value="all">Không có khu vực</option>';
+            areaSelect.disabled = true;
+            areaSelect.value = 'all';
+            return;
+        }
+
+        areaSelect.disabled = false;
+        areaSelect.innerHTML = '<option value="all">Tất cả khu vực</option>' +
+            filteredAreas.map(a => `<option value="${a}">${a}</option>`).join('');
+
+        if (!filteredAreas.includes(areaSelect.value)) {
+            areaSelect.value = 'all';
+        }
     };
 
-    areaSelect.addEventListener('change', () => { updateNpp(); renderBaoCaoCharts(); });
+    const updateNpp = () => {
+        const region = normalizeBaoCaoRegion(regionSelect.value);
+        const area = areaSelect.value;
+        let filteredData = reportData;
+
+        if (region !== 'all') {
+            filteredData = filteredData.filter(r => getAreaRegion(r.area) === region);
+        }
+        if (area !== 'all') {
+            filteredData = filteredData.filter(r => r.area === area);
+        }
+
+        const npps = [...new Set(filteredData.map(r => r.maDonVi))];
+        if (npps.length === 0) {
+            nppSelect.innerHTML = '<option value="all">Không có NPP</option>';
+            nppSelect.value = 'all';
+            nppSelect.disabled = true;
+            return;
+        }
+
+        nppSelect.disabled = false;
+        nppSelect.innerHTML = '<option value="all">Tất cả NPP</option>' +
+            npps.sort().map(n => `<option value="${n}">${n}</option>`).join('');
+
+        if (!npps.includes(nppSelect.value)) {
+            nppSelect.value = 'all';
+        }
+    };
+
+    regionSelect.addEventListener('change', () => {
+        updateArea();
+        updateNpp();
+        renderBaoCaoCharts();
+    });
+    areaSelect.addEventListener('change', () => {
+        updateNpp();
+        renderBaoCaoCharts();
+    });
     nppSelect.addEventListener('change', () => { renderBaoCaoCharts(); });
 
+    updateArea();
     updateNpp();
 }
 
@@ -362,6 +445,13 @@ function renderBaoCao() {
 
     let html = `
         <div class="filter-kv">
+            <label>🌐 Miền</label>
+            <select id="baocaoRegionFilter">
+                <option value="all">Tất cả miền</option>
+                <option value="north">Miền Bắc</option>
+                <option value="central">Miền Trung</option>
+                <option value="south">Miền Nam</option>
+            </select>
             <label>🏢 Khu vực</label>
             <select id="baocaoAreaFilter">
                 <option value="all">Tất cả khu vực</option>
