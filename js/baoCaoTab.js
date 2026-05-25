@@ -371,6 +371,7 @@ function renderBaoCao() {
             <select id="baocaoNppFilter">
                 <option value="all">Tất cả NPP</option>
             </select>
+            <button class="btn btn-secondary" id="exportBaoCaoBtn" style="margin-left:auto;">📥 Xuất Excel (Biểu đồ + Bảng)</button>
         </div>
 
         <div class="chart-container">
@@ -410,4 +411,12 @@ function renderBaoCao() {
 
     initBaoCaoFilters();
     renderBaoCaoCharts();
+
+    // Wire up export button
+    const exportBtn = document.getElementById('exportBaoCaoBtn');
+    if (exportBtn) {
+        const newBtn = exportBtn.cloneNode(true);
+        exportBtn.parentNode.replaceChild(newBtn, exportBtn);
+        newBtn.addEventListener('click', exportBaoCaoExcel);
+    }
 }

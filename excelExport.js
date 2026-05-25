@@ -1,4 +1,4 @@
-// excelExport.js - Xuất 2 file riêng: Tổng hợp và Chi tiết (đã thêm cột thông tin nhân viên và số ngày chấm công)
+// excelExport.js - Xuất 2 file riêng: Tổng hợp và Chi tiết
 
 // Dữ liệu nhân viên bổ sung
 const EMPLOYEE_EXTRA_DATA =[
@@ -812,6 +812,146 @@ function formatDateForExcel(dateStr) {
     const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
     const weekday = days[date.getDay()];
     return `${day}/${month} - ${weekday}`;
+}
+
+// Xuất Excel riêng cho tab Báo cáo (kèm biểu đồ + bảng dữ liệu tuần) - dùng ExcelJS tạo file .xlsx thật
+async function exportBaoCaoExcel() {
+    const chartIds = ['chartTotal', 'chartASM', 'chartGS', 'chartNV'];
+    const chartTitles = ['Tổng hợp tất cả nhân viên', 'ASM (Mã 2-3 ký tự)', 'GS (Mã 4 ký tự)', 'NV (Mã còn lại)'];
+
+    const firstCanvas = document.getElementById(chartIds[0]);
+    if (!firstCanvas || firstCanvas.width === 0 || firstCanvas.height === 0) {
+        alert('Vui lòng mở tab Báo cáo trước khi xuất Excel để biểu đồ được vẽ đầy đủ.');
+        return;
+    }
+
+    if (typeof ExcelJS === 'undefined') {
+        alert('Thư viện ExcelJS chưa được tải. Vui lòng refresh trang và thử lại.');
+        return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Bao cao Cham cong & Vieng tham';
+    workbook.created = new Date();
+
+    // ========== SHEET 1: Biểu đồ ==========
+    const ws1 = workbook.addWorksheet('Bieu do');
+    ws1.getColumn(1).width = 70;
+    ws1.getColumn(2).width = 30;
+
+    ws1.mergeCells('A1:B1');
+    const titleCell = ws1.getCell('A1');
+    titleCell.value = 'BAO CAO CHAM CONG & VIENG THAM - BIEU DO THEO TUAN';
+    titleCell.font = { name: 'Segoe UI', bold: true, size: 14, color: { argb: 'FFFF7300' } };
+    titleCell.alignment = { horizontal: 'center' };
+    ws1.getRow(1).height = 35;
+
+    ws1.mergeCells('A2:B2');
+    ws1.getCell('A2').value = `Ngay xuat: ${new Date().toLocaleString('vi-VN')}  |  ${document.getElementById('fromDate').value} -> ${document.getElementById('toDate').value}`;
+    ws1.getCell('A2').font = { name: 'Segoe UI', size: 11, color: { argb: 'FF555555' } };
+    ws1.getCell('A2').alignment = { horizontal: 'center' };
+    ws1.getRow(2).height = 25;
+
+    for (let i = 0; i < chartIds.length; i++) {
+        const canvas = document.getElementById(chartIds[i]);
+        if (!canvas) continue;
+
+        const titleRow = 4 + i * 22;
+
+        ws1.getCell(`A${titleRow}`).value = chartTitles[i];
+        ws1.getCell(`A${titleRow}`).font = { name: 'Segoe UI', bold: true, size: 13, color: { argb: 'FFFF7300' } };
+        ws1.mergeCells(`A${titleRow}:B${titleRow}`);
+
+        try {
+            const dataUrl = canvas.toDataURL('image/png');
+            const imageId = workbook.addImage({
+                base64: dataUrl.split(',')[1],
+                extension: 'png',
+            });
+            ws1.addImage(imageId, {
+                tl: { col: 0, row: titleRow },
+                ext: { width: 700, height: 340 }
+            });
+        } catch (e) {
+            ws1.getCell(`A${titleRow + 1}`).value = '(Khong the chup bieu do)';
+        }
+    }
+
+    // ========== SHEET 2: Dữ liệu ==========
+    const ws2 = workbook.addWorksheet('Du lieu');
+    ws2.getColumn(1).width = 35;
+    ws2.getColumn(2).width = 18;
+    ws2.getColumn(3).width = 18;
+    ws2.getColumn(4).width = 18;
+    ws2.getColumn(5).width = 18;
+    ws2.getColumn(6).width = 18;
+    ws2.getColumn(7).width = 18;
+
+    ws2.mergeCells('A1:G1');
+    ws2.getCell('A1').value = 'BAO CAO CHAM CONG & VIENG THAM - DU LIEU SO SANH TUAN';
+    ws2.getCell('A1').font = { name: 'Segoe UI', bold: true, size: 14, color: { argb: 'FFFF7300' } };
+    ws2.getCell('A1').alignment = { horizontal: 'center' };
+
+    let r = 3;
+
+    for (let i = 0; i < chartIds.length; i++) {
+        const wrapper = document.getElementById('table_' + chartIds[i]);
+        if (!wrapper) continue;
+        const table = wrapper.querySelector('.baocao-week-table');
+        if (!table) continue;
+
+        ws2.getCell(`A${r}`).value = chartTitles[i];
+        ws2.getCell(`A${r}`).font = { name: 'Segoe UI', bold: true, size: 12, color: { argb: 'FFFF7300' } };
+        ws2.mergeCells(`A${r}:G${r}`);
+        r++;
+
+        const headerCells = table.querySelectorAll('thead th');
+        const headers = Array.from(headerCells).map(th => th.textContent.trim());
+
+        headers.forEach((h, ci) => {
+            const cell = ws2.getCell(r, ci + 1);
+            cell.value = h;
+            cell.font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.border = {
+                top: { style: 'thin' }, left: { style: 'thin' },
+                bottom: { style: 'thin' }, right: { style: 'thin' },
+            };
+        });
+        r++;
+
+        const bodyRows = table.querySelectorAll('tbody tr');
+        bodyRows.forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            cells.forEach((td, ci) => {
+                const cell = ws2.getCell(r, ci + 1);
+                cell.value = td.textContent.trim();
+                cell.font = { name: 'Segoe UI', size: 11 };
+                cell.alignment = { horizontal: ci === 0 ? 'left' : 'center', vertical: 'middle' };
+                cell.border = {
+                    top: { style: 'thin' }, left: { style: 'thin' },
+                    bottom: { style: 'thin' }, right: { style: 'thin' },
+                };
+            });
+            r++;
+        });
+        r++;
+    }
+
+    try {
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `baocao_bieudo_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blob);
+    } catch (e) {
+        alert('Loi khi tao file Excel: ' + e.message);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
