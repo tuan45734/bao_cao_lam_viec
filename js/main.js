@@ -12,35 +12,39 @@ const API_CONFIG = {
     auth: 'Basic NjlhZTZlNmM4YTY0NjVmNDFlNTNhZmI0OjFuYzFnc3J1N2p2Ym10eTdncGV5NWk='
 };
 
-// Khu vực mapping
-const AREA_MAPPING = [
-    ['NPP Bảo Lâm', 'KV1'], ['NPP Công Giang', 'KV1'], ['NPP Cường Thịnh', 'KV1'],
-    ['NPP Đức Nam Tiến', 'KV1'], ['NPP Dũng Cúc', 'KV1'], ['NPP Lâm Hạ', 'KV1'],
-    ['NPP Long Liên', 'KV1'], ['NPP Nguyên Vũ', 'KV1'], ['NPP Thảo Nam', 'KV1'],
-    ['NPP Tuấn Huê', 'KV1'], ['NPP Tuấn Yến', 'KV1'], ['NPP Vũ Tấm', 'KV1'],
-    ['NPP Duy Anh', 'KV2'], ['NPP Hoa Việt', 'KV3'], ['NPP Hùng Huệ', 'KV2'],
-    ['NPP Long Châm', 'KV2'], ['NPP Ngọc Kiên', 'KV2'], ['NPP Ngọc Thêu', 'KV2'],
-    ['NPP Phong Hiền', 'KV2'], ['NPP Phúc Thịnh', 'KV3'], ['NPP Phương Đông', 'KV2'],
-    ['NPP Thành Lụa', 'KV2'], ['NPP Tuấn Huyền', 'KV2'], ['NPP Bảo Cường', 'KV3'],
-    ['NPP Hikoji', 'KV3'], ['NPP Long Hải', 'KV3'], ['NPP Tân Hoa', 'KV3'],
-    ['NPP Tây Đô', 'KV3'], ['NPP Thắng Lợi', 'KV3'], ['NPP Thành Hân', 'KV3'],
-    ['NPP Tiến Thịnh', 'KV3'], ['NPP Ánh Thu', 'KV4'], ['NPP Đức Oanh', 'KV4'],
-    ['NPP Dương Minh', 'KV4'], ['NPP Dũng Béo', 'KV4'], ['NPP Hưng Thịnh', 'KV4'],
-    ['NPP Ngọc Phúc', 'KV4'], ['NPP Nguyễn Đình Hân', 'KV4'], ['NPP Tân Thúy', 'KV4'],
-    ['NPP Thăng Hương', 'KV4'], ['NPP Thảo Thắng', 'KV4'], ['NPP Tùng Phương', 'KV3'],
-    ['NPP Đồng Lợi', 'KV5'], ['NPP Hải Hằng', 'KV5'], ['NPP Hiền Cường', 'KV5'],
-    ['NPP Hoàng Minh', 'KV5'], ['NPP Oanh Định', 'KV5'], ['NPP Sơn Lâm', 'KV5'],
-    ['NPP Thái Hoà', 'KV5'], ['NPP Thảo Xuân', 'KV5'], ['NPP Duy Khoa', 'KV5'],
-    ['NPP Tuấn Vân', 'KV5'], ['NPP Vũ Đức Nam', 'KV5'], ['NPP Anh Minh HT', 'KV6'],
-    ['NPP Hà Thanh', 'KV6'], ['NPP Hồng Đức', 'KV6'], ['NPP Linh Trang', 'KV6'],
-    ['NPP Mạnh Hà 1', 'KV6'], ['NPP Mạnh Hà 2', 'KV6'], ['NPP Minh Châu', 'KV6'],
-    ['NPP Minh Lộc', 'KV6'], ['NPP Nhung Tùng', 'KV6'], ['NPP Phương Hà', 'KV6'],
-    ['NPP Tân Bích An', 'KV6'], ['NPP Thanh Bình', 'KV6'], ['NPP Thành Thanh', 'KV6'],
-    ['NPP Thông Thơm', 'KV6'], ['NPP Trường Hằng', 'KV6'],
-    ['NPP Hiền Thuận', 'KV7'],['NPP Trung Nam', 'KV7'],['NPP Anh Viên', 'KV7'],['NPP Tường Vi', 'KV7'],['NPP Thúy Diễm', 'KV7'],
-['NPP Dương Thiên Nhi', 'KV7'],['NPP Minh Huy', 'KV7'],['NPP Tân Bảo Hân', 'KV7'],['NPP Nakoa', 'KV7'],['NPP Hoàng Gia Bảo', 'KV7'],
-    ['KV1', 'KV1'], ['KV2', 'KV2'], ['KV3', 'KV3'], ['KV4', 'KV4'], ['KV5', 'KV5'], ['KV6', 'KV6'], ['KV7', 'KV7']
-];
+// Khu vực mapping - được khởi tạo từ API
+let AREA_MAPPING = [];
+
+async function initAreaMapping() {
+    try {
+        const response = await fetch(`${API_CONFIG.baseUrl}/SaleGroup`, {
+            method: 'GET',
+            headers: {
+                'accept': 'application/json',
+                'Authorization': API_CONFIG.auth
+            }
+        });
+        const result = await response.json();
+        if (!result.status) return;
+
+        const items = result.data;
+        const map = {};
+        items.forEach(item => { map[item.ma_nhom] = item; });
+
+        function findKV(ma) {
+            const item = map[ma];
+            if (!item || !item.ma_nhom_cha) return null;
+            if (item.ma_nhom.startsWith('KV')) return item.ma_nhom;
+            return findKV(item.ma_nhom_cha);
+        }
+
+        AREA_MAPPING = items
+            .map(item => [item.ma_nhom, findKV(item.ma_nhom)])
+            .filter(([, kv]) => kv !== null);
+    } catch (error) {
+        console.error('Error fetching area mapping:', error);
+    }
+}
 
 // ==================== HÀM TIỆN ÍCH ====================
 function delay(ms) {
@@ -1016,6 +1020,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         try {
+            await initAreaMapping();
             await fetchEmployees();
             await fetchTimesheet(fromDate, toDate);
             await fetchVisits(fromDate, toDate);
