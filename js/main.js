@@ -3,6 +3,7 @@
 // Data storage
 let employeesData = [];
 let timesheetData = [];
+let kpiData = [];
 let reportData = [];
 Chart.register(ChartDataLabels);
 // API Configuration
@@ -380,6 +381,31 @@ async function fetchVisits(fromDate, toDate) {
     }
 }
 
+async function fetchKPI(thang, nam) {
+    try {
+        updateProgress(76, 'Đang lấy dữ liệu KPI...');
+        await delay(500);
+        const response = await fetch(`${API_CONFIG.baseUrl}/KPI?thang=${thang}&nam=${nam}`, {
+            method: 'GET',
+            headers: {
+                'accept': 'application/json',
+                'Authorization': API_CONFIG.auth
+            }
+        });
+        const data = await response.json();
+        if (data.result) {
+            kpiData = data.result;
+            updateProgress(80, `Đã lấy dữ liệu KPI của ${kpiData.length} nhân viên`);
+            return kpiData;
+        }
+        throw new Error(data.message || 'Lỗi lấy dữ liệu KPI');
+    } catch (error) {
+        console.error('Error fetching KPI:', error);
+        kpiData = [];
+        return [];
+    }
+}
+
 // ==================== XỬ LÝ DỮ LIỆU ====================
 function processReport() {
     const employeeMap = new Map();
@@ -584,6 +610,13 @@ function processReport() {
             }
         }
         
+        const kpiRecord = kpiData.find(k => (k.ma_nv || '').toUpperCase() === (emp.ma || '').toUpperCase());
+        const kpi = kpiRecord ? {
+            kh: kpiRecord.doanh_so.kh,
+            th: kpiRecord.doanh_so.th,
+            tl: kpiRecord.doanh_so.tl
+        } : null;
+
         reportData.push({
             maNV: emp.ma,
             tenNV: emp.ten,
@@ -594,7 +627,8 @@ function processReport() {
             attendanceDetails: attendanceDetails,
             visitDetails: processedVisits,
             dailyWork: dailyWork,
-            totalWork: totalWork.toFixed(1)
+            totalWork: totalWork.toFixed(1),
+            kpi: kpi
         });
     }
     
@@ -670,19 +704,20 @@ function exportSummaryFile(groupedByKV) {
                     <th>Quên chấm công</th>
                     <th>Viếng thăm<br>không đủ</th>
                     <th>Tổng công</th>
+                    <th>Doanh số (KH/TH/TL)</th>
                     <th>Ghi chú</th>
                 </tr>
             </thead>
             <tbody>`;
     
     for (const kv of sortedKV) {
-        html += `<tr class="kv-row"><td colspan="10"><strong>🏢 KHU VỰC: ${kv}</strong></td></tr>`;
+        html += `<tr class="kv-row"><td colspan="11"><strong>🏢 KHU VỰC: ${kv}</strong></td></tr>`;
         
         const npps = groupedByKV[kv];
         const sortedNPP = Object.keys(npps).sort();
         
         for (const npp of sortedNPP) {
-            html += `<tr class="npp-row"><td colspan="10"><strong>📌 ${npp}</strong></td></tr>`;
+            html += `<tr class="npp-row"><td colspan="11"><strong>📌 ${npp}</strong></td></tr>`;
             
             const employees = npps[npp];
             let nppStt = 1;
@@ -725,6 +760,19 @@ function exportSummaryFile(groupedByKV) {
                     });
                 }
                 
+                let kpiSummaryHtml = '';
+                if (emp.kpi) {
+                    const formatNum = (n) => {
+                        if (n >= 1000000000) return (n / 1000000000).toFixed(1) + ' tỷ';
+                        if (n >= 1000000) return (n / 1000000).toFixed(1) + ' tr';
+                        if (n >= 1000) return (n / 1000).toFixed(1) + ' k';
+                        return n.toLocaleString('vi-VN');
+                    };
+                    kpiSummaryHtml = `${formatNum(emp.kpi.kh)} / ${formatNum(emp.kpi.th)} / ${emp.kpi.tl}%`;
+                } else {
+                    kpiSummaryHtml = 'N/A';
+                }
+                
                 html += `
                     <tr>
                         <td class="stt-cell">${nppStt}</td>
@@ -736,6 +784,7 @@ function exportSummaryFile(groupedByKV) {
                         <td class="number-cell">${missingAttendanceCount}</td>
                         <td class="number-cell">${insufficientVisitCount}</td>
                         <td class="number-cell"><strong>${emp.totalWork}</strong></td>
+                        <td class="number-cell">${kpiSummaryHtml}</td>
                         <td></td>
                     </tr>
                 `;
@@ -806,18 +855,19 @@ function exportDetailFile(groupedByKV) {
                     <th>Chi tiết viếng thăm</th>
                     <th>Công chi tiết</th>
                     <th>Tổng công</th>
+                    <th>Doanh số (KH/TH/TL)</th>
                 </tr>
             </thead>
             <tbody>`;
     
     for (const kv of sortedKV) {
-        html += `<tr class="kv-row"><td colspan="7"><strong>🏢 KHU VỰC: ${kv}</strong></td></tr>`;
+        html += `<tr class="kv-row"><td colspan="8"><strong>🏢 KHU VỰC: ${kv}</strong></td></tr>`;
         
         const npps = groupedByKV[kv];
         const sortedNPP = Object.keys(npps).sort();
         
         for (const npp of sortedNPP) {
-            html += `<tr class="npp-row"><td colspan="7"><strong>📌 ${npp}</strong></td></tr>`;
+            html += `<tr class="npp-row"><td colspan="8"><strong>📌 ${npp}</strong></td></tr>`;
             
             const employees = npps[npp];
             let nppStt = 1;
@@ -873,6 +923,19 @@ function exportDetailFile(groupedByKV) {
                     });
                 }
                 
+                let kpiExportHtml = '';
+                if (emp.kpi) {
+                    const formatNum = (n) => {
+                        if (n >= 1000000000) return (n / 1000000000).toFixed(1) + ' tỷ';
+                        if (n >= 1000000) return (n / 1000000).toFixed(1) + ' tr';
+                        if (n >= 1000) return (n / 1000).toFixed(1) + ' k';
+                        return n.toLocaleString('vi-VN');
+                    };
+                    kpiExportHtml = `KH: ${formatNum(emp.kpi.kh)}<br>TH: ${formatNum(emp.kpi.th)}<br>TL: ${emp.kpi.tl}%`;
+                } else {
+                    kpiExportHtml = 'N/A';
+                }
+                
                 html += `
                     <tr>
                         <td class="stt-cell">${nppStt}</td>
@@ -882,6 +945,7 @@ function exportDetailFile(groupedByKV) {
                         <td style="vertical-align:top;">${visitHtml}</td>
                         <td style="vertical-align:top;">${workHtml}</td>
                         <td class="total-cell"><strong>${emp.totalWork}</strong></td>
+                        <td style="vertical-align:top; text-align:center;">${kpiExportHtml}</td>
                     </tr>
                 `;
                 nppStt++;
@@ -955,6 +1019,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetchEmployees();
             await fetchTimesheet(fromDate, toDate);
             await fetchVisits(fromDate, toDate);
+            const fromParts = fromDate.split('-');
+            await fetchKPI(parseInt(fromParts[1]), parseInt(fromParts[0]));
             processReport();
             
             // Cập nhật filters

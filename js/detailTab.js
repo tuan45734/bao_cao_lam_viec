@@ -36,6 +36,7 @@ function renderDetail() {
                     <th>Chi tiết viếng thăm</th>
                     <th>Công chi tiết</th>
                     <th>Tổng công</th>
+                    <th>Doanh số</th>
                 </tr>
             </thead>
             <tbody>`;
@@ -44,13 +45,13 @@ function renderDetail() {
     const sortedKV = Object.keys(groupedByKV).sort();
     
     for (const kv of sortedKV) {
-        html += `<tr class="group-row"><td colspan="7"><strong>🏢 KHU VỰC: ${kv}</strong></td></tr>`;
+        html += `<tr class="group-row"><td colspan="8"><strong>🏢 KHU VỰC: ${kv}</strong></td></tr>`;
         
         const npps = groupedByKV[kv];
         const sortedNPP = Object.keys(npps).sort();
         
         for (const npp of sortedNPP) {
-            html += `<tr class="group-row" style="background:#f5f5f5;"><td colspan="7"><strong>📌 ${npp}</strong></td></tr>`;
+            html += `<tr class="group-row" style="background:#f5f5f5;"><td colspan="8"><strong>📌 ${npp}</strong></td></tr>`;
             
             const employees = sortEmployeesByPriority(npps[npp]);
             
@@ -119,6 +120,32 @@ function renderDetail() {
                     <div style="font-size:11px;">công</div>
                 </div>`;
                 
+                let kpiHtml = '';
+                if (emp.kpi) {
+                    const formatNum = (n) => {
+                        if (n >= 1000000000) return (n / 1000000000).toFixed(1) + ' tỷ';
+                        if (n >= 1000000) return (n / 1000000).toFixed(1) + ' tr';
+                        if (n >= 1000) return (n / 1000).toFixed(1) + ' k';
+                        return n.toLocaleString('vi-VN');
+                    };
+                    kpiHtml = `<div style="text-align:center;">
+                        <div style="padding:4px 8px; margin:2px 0; background:#e3f2fd; border-radius:4px;">
+                            <div style="font-size:11px; color:#1565c0;">KH</div>
+                            <strong style="font-size:13px;">${formatNum(emp.kpi.kh)}</strong>
+                        </div>
+                        <div style="padding:4px 8px; margin:2px 0; background:#e8f5e9; border-radius:4px;">
+                            <div style="font-size:11px; color:#2e7d32;">TH</div>
+                            <strong style="font-size:13px;">${formatNum(emp.kpi.th)}</strong>
+                        </div>
+                        <div style="padding:4px 8px; margin:2px 0; background:${emp.kpi.tl >= 100 ? '#e8f5e9' : emp.kpi.tl >= 80 ? '#fff8e1' : '#ffebee'} ; border-radius:4px;">
+                            <div style="font-size:11px; color:${emp.kpi.tl >= 100 ? '#2e7d32' : emp.kpi.tl >= 80 ? '#f57f17' : '#c62828'};">TL</div>
+                            <strong style="font-size:13px; color:${emp.kpi.tl >= 100 ? '#2e7d32' : emp.kpi.tl >= 80 ? '#f57f17' : '#c62828'};">${emp.kpi.tl}%</strong>
+                        </div>
+                    </div>`;
+                } else {
+                    kpiHtml = `<div style="text-align:center; color:#999; padding:8px;">Không có KPI</div>`;
+                }
+                
                 html += `
                     <tr>
                         <td style="vertical-align:top;">${stt}</td>
@@ -128,6 +155,7 @@ function renderDetail() {
                         <td style="vertical-align:top;">${visitHtml}</td>
                         <td style="vertical-align:top;">${dailyWorkHtml}</td>
                         <td style="vertical-align:top; text-align:center;">${totalHtml}</td>
+                        <td style="vertical-align:top; text-align:center;">${kpiHtml}</td>
                     </tr>
                 `;
             }
